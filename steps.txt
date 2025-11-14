@@ -1,0 +1,72 @@
+## Prerequisites
+- Python 3.9+ installed
+- Node.js 16+ installed
+- Git installed
+- Code editor (VS Code recommended)
+- For OCR, install Tesseract:
+    Download from https://github.com/UB-Mannheim/tesseract/wiki
+
+Terminal 1
+## BACKEND
+    - cd backend
+
+    ## create a virtual environment
+        - python -m venv venv
+        activate environment in cmd- env\Scripts\activate
+
+    ## Install the requirements 
+        - pip install -r requirements.txt
+    
+    ## to start backend server 
+        - python run.py
+
+
+
+Terminal 2
+## Frontend
+
+    ##install dependencies
+        - npm install 
+        
+        Select a framework: › 
+                        Vanilla
+                        Vue
+                        ❯ React    ← Select this one
+                        Preact
+                        Lit
+                        Svelte
+                        Solid
+                        Qwik
+        Then:
+                        ? Select a variant: › 
+                        ❯ JavaScript    ← Select this one
+                        TypeScript
+                        JavaScript + SWC
+                        TypeScript + SWC
+
+        - npm install axios react-router-dom lucide-react
+        - npm install -D tailwindcss postcss autoprefixer
+    Run npm install again to ensure all dependencies are properly installed: npm install
+
+    ##if error on tailwindcss
+        - npm install -D @tailwindcss/postcss8\
+        - rm -rf node_modules
+        - npm install
+
+    ## Run the development server
+        - npm run dev
+
+    ##If you still encounter issues, you might need to:
+        Clear the Vite cache: rm -rf node_modules/.vite
+        Reinstall dependencies: npm install
+        Then run the development server again: npm run dev
+
+
+Make sure everything works:
+Terminal 1:
+cd backend
+python run.py
+Terminal 2:
+cd frontend
+npm run dev
+
