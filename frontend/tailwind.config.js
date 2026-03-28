@@ -9,3 +9,13 @@ export default {
   },
   plugins: [],
 }
+module.exports = {
+  theme: {
+    extend: {
+      colors: {
+        cyanAccent: '#00eaff',   // bright neon cyan
+        cyanSoft: '#00bcd4',     // softer cyan
+      },
+    },
+  },
+};

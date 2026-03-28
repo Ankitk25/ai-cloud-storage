@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { authAPI } from '../services/api';
+import api, { authAPI } from '../services/api';
 
 const AuthContext = createContext(null);
 
@@ -23,8 +23,8 @@ export const AuthProvider = ({ children }) => {
     const token = localStorage.getItem('token');
     if (token) {
       try {
-        const userData = await authAPI.getCurrentUser();
-        setUser(userData);
+        const response = await api.get('/auth/me');
+        setUser(response.data);
       } catch (error) {
         console.error('Auth check failed:', error);
         localStorage.removeItem('token');
@@ -37,8 +37,8 @@ export const AuthProvider = ({ children }) => {
     try {
       const data = await authAPI.login(username, password);
       localStorage.setItem('token', data.access_token);
-      const userData = await authAPI.getCurrentUser();
-      setUser(userData);
+      const response = await api.get('/auth/me');
+      setUser(response.data);
     } catch (error) {
       throw error;
     }

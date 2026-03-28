@@ -39,22 +39,29 @@ export const authAPI = {
 
 // File APIs
 export const fileAPI = {
-  uploadFile: async (file, onProgress) => {
+  uploadFile: async (file, onProgress, forceUpload=false) => {
     const formData = new FormData();
     formData.append('file', file);
     
-    const response = await api.post('/files/upload', formData, {
+    try{
+      const response = await api.post(`/files/upload?force=${forceUpload}`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
       onUploadProgress: (progressEvent) => {
-        if (onProgress) {
+        if (onProgress && progressEvent.total) {
           const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
           onProgress(percentCompleted);
         }
       }
     });
+    console.log('API Response:', response.data); // DEBUG
     return response.data;
+    }
+    catch (error) {
+      console.error('API Error:', error.response?.data || error.message);
+      throw error;
+    }
   },
   
   listFiles: async () => {

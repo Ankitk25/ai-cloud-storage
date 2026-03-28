@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, UploadFile, File as FastAPIFile, HTTPException
+from fastapi import APIRouter, Depends, UploadFile, File as FastAPIFile, HTTPException, Query
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List
+from typing import List 
 import os
 
 from database.session import get_db
@@ -12,16 +12,36 @@ from ..services.file_service import FileService
 
 router = APIRouter(prefix="/files", tags=["Files"])
 
-@router.post("/upload", response_model=FileUploadResponse)
+@router.post("/upload")
 async def upload_file(
     file: UploadFile = FastAPIFile(...),
+    force: bool = Query(False, description="Force upload even if duplicate"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """Upload a new file"""
     
-    db_file = await FileService.save_file(file, current_user, db)
-    return db_file
+    result = await FileService.save_file(file, current_user, db, force_upload=force)
+    
+    if result.get('duplicate_detected'):
+        return {
+            "status": "duplicate_found",
+            "duplicate_type": result.get('duplicate_type'),
+            "existing_file": result['existing_file']
+        }
+    
+    return {
+        "status": "success",
+        "message": "File uploaded successfully",
+        "file": {
+            "id": result['file'].id,
+            "filename": result['file'].filename,
+            "original_filename": result['file'].original_filename,
+            "file_size": result['file'].file_size,
+            "mime_type": result['file'].mime_type,
+            "uploaded_at": result['file'].uploaded_at.isoformat()
+        }
+    }
 
 @router.get("/", response_model=List[FileListResponse])
 async def list_files(
@@ -54,6 +74,12 @@ async def download_file(
     
     file = await FileService.get_file_by_id(file_id, current_user, db)
     
+   # FIRST check cloud
+    if file.file_path.startswith('http'):
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url=file.file_path)
+
+    # THEN check local
     if not os.path.exists(file.file_path):
         raise HTTPException(status_code=404, detail="File not found on disk")
     
@@ -69,6 +95,7 @@ async def delete_file(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
+    
     """Delete a file"""
     
     await FileService.delete_file(file_id, current_user, db)
