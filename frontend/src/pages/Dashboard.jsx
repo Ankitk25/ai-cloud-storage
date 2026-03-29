@@ -19,7 +19,8 @@ const Dashboard = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [categories, setCategories] = useState([]);
   const [view, setView] = useState("grid");
-
+  const [activeTag, setActiveTag] = useState(null);
+  
   useEffect(() => {
     loadFiles();
   }, []);
@@ -52,9 +53,12 @@ const Dashboard = () => {
   const filterFiles = () => {
     let filtered = [...allFiles];
 
-    if (activeMenu === "images") {
-      filtered = filtered.filter(file => file.mime_type?.startsWith("image/"));
-    } else if (activeMenu === "documents") {
+    if (activeTag) {
+      filtered = filtered.filter(file =>
+        file.tags && file.tags.toLowerCase().includes(activeTag)
+      );
+    } 
+    else if (activeMenu === "documents") {
       filtered = filtered.filter(file =>
         file.mime_type?.includes("pdf") ||
         file.mime_type?.includes("document") ||
@@ -208,7 +212,12 @@ const Dashboard = () => {
                 <FileSkeleton />
               </div>
             ) : (
-              <FileList files={displayedFiles} onDelete={loadFiles} view={view} />
+              <FileList
+                files={displayedFiles}
+                onDelete={loadFiles}
+                view={view}
+                onTagClick={setActiveTag}
+              />
             )}
           </div>
         </div>

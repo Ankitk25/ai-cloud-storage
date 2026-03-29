@@ -2,9 +2,18 @@ import React, { useState } from 'react';
 import {Download, Trash2, File, Image, FileText, Video, Music, Archive, Tag, Eye, Loader} from 'lucide-react';
 import { fileAPI } from '../services/api';
 
-const FileList = ({ files, onDelete, view  }) => {
+const FileList = ({ files, onDelete, view, onTagClick }) => {
   const [expandedFile, setExpandedFile] = useState(null);
   const [previewFile, setPreviewFile] = useState(null);
+  const [selectedFiles, setSelectedFiles] = useState([]);
+
+  const toggleSelect = (fileId) => {
+    setSelectedFiles(prev =>
+      prev.includes(fileId)
+        ? prev.filter(id => id !== fileId)
+        : [...prev, fileId]
+    );
+  };
 
   const formatFileSize = (bytes) => {
     if (bytes === 0) return '0 Bytes';
@@ -104,7 +113,7 @@ const FileList = ({ files, onDelete, view  }) => {
     try {
       await fileAPI.downloadFile(file.id, file.original_filename);
     } catch {
-      alert('Download failed');
+      console.error('Download failed');
     }
   };
 
@@ -114,7 +123,7 @@ const FileList = ({ files, onDelete, view  }) => {
         await fileAPI.deleteFile(fileId);
         onDelete();
       } catch {
-        alert('Delete failed');
+        console.error('Delete failed');
       }
     }
   };
@@ -132,7 +141,30 @@ const FileList = ({ files, onDelete, view  }) => {
   }
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+    <div className={view === "grid" ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" : "space-y-3"}>
+      {selectedFiles.length > 0 && (
+        <div className="
+          fixed bottom-6 left-1/2 -translate-x-1/2
+          bg-[#0f1720] border border-cyan-500/20
+          px-6 py-3 rounded-xl flex gap-4 items-center
+          shadow-lg z-50
+        ">
+          <span className="text-sm text-cyan-300">
+            {selectedFiles.length} selected
+          </span>
+
+          <button
+            onClick={async () => {
+              await Promise.all(selectedFiles.map(id => fileAPI.deleteFile(id)));
+              setSelectedFiles([]);
+              onDelete();
+            }}
+            className="text-red-400 hover:text-red-500"
+          >
+            Delete
+          </button>
+        </div>
+        )}
       {files.map((file) => {
         const tags = parseTags(file.tags);
         const aiStatus = getAIProcessingStatus(file.ai_processed);
@@ -141,104 +173,148 @@ const FileList = ({ files, onDelete, view  }) => {
         return (
           <div
             key={file.id}
-            className="
-            group relative p-4 rounded-2xl
-            glass
-            transition-all duration-300
-            hover:scale-[1.03]
-            hover:shadow-[0_0_25px_rgba(0,255,255,0.2)]
-            "
-          >
-
+            className={`
+              ${view === "grid" ? `
+                group p-4 rounded-2xl glass
+                hover:scale-[1.03]
+                transition-all duration-300
+                shadow-[0_0_15px_rgba(0,255,255,0.1)]
+              ` : `
+                flex items-center justify-between
+                p-3 rounded-lg glass
+              `}
+            `}
+            >
             {/* Main File Row */}
-            <div className="flex items-start justify-between">
-              <div className="flex gap-4">
-                <div className="flex items-center justify-center h-full">
-                  <div className="p-4 rounded-full bg-cyan-500/10 group-hover:bg-cyan-500/20 transition">
+            
+            {view === "grid" ? (
+              
+
+              <div className="space-y-3 text-center relative">
+
+                <input
+                  type="checkbox"
+                  checked={selectedFiles.includes(file.id)}
+                  onChange={() => toggleSelect(file.id)}
+                  className="absolute top-2 left-2 w-4 h-4 accent-cyan-500"
+                />
+                
+
+                {/* ICON */}
+                <div className="flex justify-center">
+                  <div className="p-5 rounded-full bg-cyan-500/10 group-hover:bg-cyan-500/20 transition">
                     {getFileIcon(file.mime_type)}
                   </div>
                 </div>
 
-                <div>
-                  <h3
-                    onClick={() => setPreviewFile(file)}
-                    className="text-sm font-semibold text-white truncate group-hover:text-cyan-400 cursor-pointer">
-                    {file.original_filename}
-                  </h3>
-                  <p className="text-xs text-gray-400 mt-1">
-                    {formatFileSize(file.file_size)}
-                  </p>
+                {/* NAME */}
+                <p
+                  onClick={() => setPreviewFile(file)}
+                  className="text-sm text-white truncate cursor-pointer hover:text-cyan-400"
+                >
+                  {file.original_filename}
+                </p>
 
-                  <div className="flex gap-2 mt-2 items-center flex-wrap">
-                    {file.category && getCategoryBadge(file.category)}
+                {/* SIZE */}
+                <p className="text-xs text-gray-400">
+                  {formatFileSize(file.file_size)}
+                </p>
 
-                    {file.ai_processed !== undefined &&
-                      file.ai_processed !== 2 && (
-                        <span
-                          className={`
-                            absolute bottom-2 left-2
-                            text-[10px] px-2 py-1 rounded-full
-                            bg-cyan-500/10 text-cyan-300
-                            ${aiStatus.color}
-                          `}
-                        >
-
-                          {aiStatus.icon}
-                          {aiStatus.text}
-                        </span>
-                      )}
+                {/* TAGS */}
+                {tags.length > 0 && (
+                  <div className="flex justify-center gap-2 flex-wrap mt-2">
+                    {tags.slice(0, 3).map((tag, index) => (
+                      
+                      <span
+                        key={index}
+                        onClick={() => onTagClick && onTagClick(tag)}
+                        className="
+                          cursor-pointer
+                          text-[10px] px-2 py-1 rounded-full
+                          bg-cyan-500/10 text-cyan-300
+                          border border-cyan-500/20
+                          hover:bg-cyan-500/30 transition
+                        ">
+                        {tag}
+                      </span>
+                    ))}
+                    {tags.length > 3 && (
+                      <span className="text-[10px] text-gray-400">
+                        +{tags.length - 3}
+                      </span>
+                    )}
                   </div>
-
-                  {/* Tags */}
-                  {tags.length > 0 && (
-                    <div className="flex gap-2 mt-2 flex-wrap">
-                      {tags.slice(0, 3).map((tag, index) => (
-                        <span
-                          key={index}
-                          className="text-[10px] px-2 py-1 rounded-full bg-cyan-500/10 text-cyan-300"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                      {tags.length > 3 && (
-                        <span className="text-xs text-gray-500">
-                          +{tags.length - 3} more
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex gap-2">
-                {file.extracted_text && (
-                  <button
-                    onClick={() => toggleExpand(file.id)}
-                    className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
-                    title="View extracted text"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </button>
                 )}
+                
 
-                <div
-                  className="
-                    absolute top-2 right-2 flex gap-2
-                    opacity-0 group-hover:opacity-100 transition">
+                {/* ACTIONS */}
+                <div className="flex justify-center gap-2 mt-2 opacity-0 group-hover:opacity-100 transition">
                   <button
                     onClick={() => handleDownload(file)}
-                    className="p-2 bg-[#0b0f12] rounded-lg hover:bg-cyan-500/20">
+                    className="p-2 bg-[#0b0f12] rounded-lg hover:bg-cyan-500/20"
+                  >
                     <Download className="w-4 h-4 text-white" />
                   </button>
 
                   <button
                     onClick={() => handleDelete(file.id)}
-                    className="p-2 bg-[#0b0f12] rounded-lg hover:bg-red-500/20">
+                    className="p-2 bg-[#0b0f12] rounded-lg hover:bg-red-500/20"
+                  >
                     <Trash2 className="w-4 h-4 text-white" />
                   </button>
                 </div>
+
               </div>
-            </div>
+
+            ) : (
+
+              <div className="flex items-center justify-between w-full relative">
+
+                {/* LEFT */}
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={selectedFiles.includes(file.id)}
+                    onChange={() => toggleSelect(file.id)}
+                    className="mr-2 w-4 h-4 accent-cyan-500"
+                  />
+                  {getFileIcon(file.mime_type)}
+
+                  <div>
+                    <p
+                      onClick={() => setPreviewFile(file)}
+                      className="text-white text-sm cursor-pointer hover:text-cyan-400"
+                    >
+                      {file.original_filename}
+                    </p>
+
+                    <p className="text-xs text-gray-400">
+                      {formatFileSize(file.file_size)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* RIGHT ACTIONS */}
+                <div className="flex gap-2">
+
+                  <button
+                    onClick={() => handleDownload(file)}
+                    className="p-2 hover:bg-cyan-500/20 rounded"
+                  >
+                    <Download className="w-4 h-4" />
+                  </button>
+
+                  <button
+                    onClick={() => handleDelete(file.id)}
+                    className="p-2 hover:bg-red-500/20 rounded"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+
+                </div>
+              </div>
+
+            )}
 
             {/* Expanded Details */}
             {isExpanded && file.extracted_text && (
@@ -315,25 +391,6 @@ const FileList = ({ files, onDelete, view  }) => {
           </div>
         </div>
       )}
-      <div className="
-          absolute top-2 right-2 flex gap-2
-          opacity-0 group-hover:opacity-100 transition
-        ">
-          <button
-            onClick={() => handleDownload(file)}
-            className="p-2 bg-[#0b0f12] rounded-lg hover:bg-cyan-500/20"
-          >
-            <Download className="w-4 h-4 text-white" />
-          </button>
-
-          <button
-            onClick={() => handleDelete(file.id)}
-            className="p-2 bg-[#0b0f12] rounded-lg hover:bg-red-500/20"
-          >
-            <Trash2 className="w-4 h-4 text-white" />
-          </button>
-      </div>
-
     </div>
   );
 };
