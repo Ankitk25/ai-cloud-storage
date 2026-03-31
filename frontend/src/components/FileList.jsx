@@ -376,16 +376,22 @@ const FileList = ({ files, onDelete, view, onTagClick }) => {
               {previewFile.mime_type?.startsWith("image/") ? (
                 <img
                   src={`http://localhost:8000/api/files/${previewFile.id}/download`}
-                  alt=""
-                  className="max-h-[70vh] rounded-lg shadow-lg"
+                  className="max-h-[70vh] rounded-lg"
                 />
+
+              ) : previewFile.mime_type?.includes("pdf") ? (
+
+                <iframe
+                  src={`http://localhost:8000/api/files/${previewFile.id}/download`}
+                  className="w-full h-[70vh] rounded-lg"
+                />
+
               ) : (
+
                 <div className="text-center text-gray-400">
-                  <p className="text-lg">Preview not supported</p>
-                  <p className="text-sm mt-2">
-                    Download file to view it
-                  </p>
+                  <p>Preview not supported</p>
                 </div>
+
               )}
             </div>
           </div>

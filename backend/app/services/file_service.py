@@ -232,16 +232,12 @@ class FileService:
 
         if settings.USE_CLOUD_STORAGE:
             # DON'T delete local file yet - AI needs it
-            with open(file_path, 'rb') as file_data:
-                cloud_storage.s3_client.upload_fileobj(
-                    file_data,
-                    cloud_storage.bucket_name,
-                    object_key,
-                    ExtraArgs={'ContentType': cloud_storage._get_content_type(file_path)}
-                )
-            cloud_url = f"{settings.R2_PUBLIC_URL}/{object_key}"
+            cloud_url = cloud_storage.upload_file(file_path, object_key)
+            
             print(f"✓ Uploaded to cloud: {object_key}")
             print(f"☁️ Cloud URL: {cloud_url}")
+        else:
+            cloud_url = None    
 
         # Upload to cloud if enabled
         
@@ -308,11 +304,20 @@ class FileService:
         file = await FileService.get_file_by_id(file_id, user, db)
         
         # Delete physical file
-        if os.path.exists(file.file_path):
+        # Delete from cloud if stored in R2
+        if file.file_path.startswith("http"):
+            try:
+                object_key = file.file_path.replace(f"{settings.R2_PUBLIC_URL}/", "")
+                cloud_storage.delete_file(object_key)
+            except Exception as e:
+                print(f"Error deleting from cloud: {e}")
+
+        # Delete local file only if exists (fallback case)
+        elif os.path.exists(file.file_path):
             try:
                 os.remove(file.file_path)
             except Exception as e:
-                print(f"Error deleting file: {e}")
+                print(f"Error deleting local file: {e}")
         
         # Delete thumbnail if exists
         if file.thumbnail_path and os.path.exists(file.thumbnail_path):
@@ -326,3 +331,14 @@ class FileService:
         await db.commit()
         
         return True
+    @staticmethod
+    async def get_file_by_id_no_user(file_id: int, db: AsyncSession) -> File:
+        result = await db.execute(
+            select(File).where(File.id == file_id)
+        )
+        file = result.scalar_one_or_none()
+
+        if not file:
+            raise HTTPException(status_code=404, detail="File not found")
+
+        return file

@@ -8,7 +8,7 @@ class CloudStorageService:
         if settings.USE_CLOUD_STORAGE:
             self.s3_client = boto3.client(
                 's3',
-                endpoint_url=settings.R2_ENDPOINT,
+                endpoint_url=f"https://{settings.R2_ACCOUNT_ID}.r2.cloudflarestorage.com",
                 aws_access_key_id=settings.R2_ACCESS_KEY_ID,
                 aws_secret_access_key=settings.R2_SECRET_ACCESS_KEY,
                 region_name='auto'
@@ -38,9 +38,9 @@ class CloudStorageService:
             # Generate public URL
             public_url = f"{settings.R2_PUBLIC_URL}/{object_key}"
             
-            # Delete local file after upload (optional)
-            if os.path.exists(file_path):
-                os.remove(file_path)
+            # # Delete local file after upload (optional)
+            # if os.path.exists(file_path):
+            #     os.remove(file_path)
             
             print(f"✓ Uploaded to cloud: {object_key}")
             return public_url

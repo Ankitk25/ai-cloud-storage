@@ -9,6 +9,8 @@ from ..models.user import User
 from ..core.deps import get_current_user
 from ..schemas.file import FileUploadResponse, FileListResponse
 from ..services.file_service import FileService
+from ..models.file import File
+from sqlalchemy import select
 
 router = APIRouter(prefix="/files", tags=["Files"])
 
@@ -67,21 +69,26 @@ async def get_file_info(
 @router.get("/{file_id}/download")
 async def download_file(
     file_id: int,
-    current_user: User = Depends(get_current_user),
+    # current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """Download a file"""
     
-    file = await FileService.get_file_by_id(file_id, current_user, db)
+    file = await FileService.get_file_by_id_no_user(file_id, db)
     
    # FIRST check cloud
-    if file.file_path.startswith('http'):
+    if file.file_path.startswith("http"):
         from fastapi.responses import RedirectResponse
-        return RedirectResponse(url=file.file_path)
+        return {"url": file.file_path}
 
-    # THEN check local
-    if not os.path.exists(file.file_path):
-        raise HTTPException(status_code=404, detail="File not found on disk")
+    # # THEN check local
+    #     # If cloud file → redirect
+    # if file.file_path.startswith('http'):
+    #     from fastapi.responses import RedirectResponse
+    #     return RedirectResponse(url=file.file_path)
+
+    # Else local
+    raise HTTPException(status_code=404, detail="File not found")
     
     return FileResponse(
         path=file.file_path,
@@ -100,3 +107,4 @@ async def delete_file(
     
     await FileService.delete_file(file_id, current_user, db)
     return {"message": "File deleted successfully"}
+
