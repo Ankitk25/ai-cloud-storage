@@ -31,13 +31,13 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["*"],
 )
-@app.middleware("http")
-async def debug_cors(request, call_next):
-    print(f"Request: {request.method} {request.url}")
-    print(f"Origin: {request.headers.get('origin')}")
-    response = await call_next(request)
-    print(f"Response status: {response.status_code}")
-    return response
+# @app.middleware("http")
+# async def debug_cors(request, call_next):
+#     print(f"Request: {request.method} {request.url}")
+#     print(f"Origin: {request.headers.get('origin')}")
+#     response = await call_next(request)
+#     print(f"Response status: {response.status_code}")
+#     return response
 
 # Include routers
 app.include_router(auth.router, prefix="/api")
