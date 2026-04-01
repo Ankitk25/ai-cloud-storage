@@ -76,24 +76,17 @@ export const fileAPI = {
   
   downloadFile: async (fileId, originalFilename) => {
     try {
-      // Step 1: get file URL from backend
       const res = await api.get(`/files/${fileId}/download`);
       const fileUrl = res.data.url;
 
-      // Step 2: fetch file as blob (THIS IS KEY)
-      const fileResponse = await fetch(fileUrl);
-      const blob = await fileResponse.blob();
-
-      // Step 3: force download
-      const url = window.URL.createObjectURL(blob);
+      // Create hidden link
       const link = document.createElement('a');
-      link.href = url;
-      link.download = originalFilename;
+      link.href = fileUrl;
+      link.setAttribute('download', originalFilename);
+      link.setAttribute('target', '_blank'); // important
       document.body.appendChild(link);
       link.click();
       link.remove();
-
-      window.URL.revokeObjectURL(url);
 
     } catch (err) {
       console.error("Download failed:", err);

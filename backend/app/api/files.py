@@ -66,35 +66,33 @@ async def get_file_info(
     file = await FileService.get_file_by_id(file_id, current_user, db)
     return file
 
+from fastapi.responses import RedirectResponse
+
 @router.get("/{file_id}/download")
 async def download_file(
     file_id: int,
-    # current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """Download a file"""
-    
+
     file = await FileService.get_file_by_id_no_user(file_id, db)
-    
-   # FIRST check cloud
+
+    # If file is in cloud (R2)
     if file.file_path.startswith("http"):
-        from fastapi.responses import RedirectResponse
-        return {"url": file.file_path}
+        return {
+            "url": file.file_path,
+            "filename": file.original_filename
+        }
 
-    # # THEN check local
-    #     # If cloud file → redirect
-    # if file.file_path.startswith('http'):
-    #     from fastapi.responses import RedirectResponse
-    #     return RedirectResponse(url=file.file_path)
+    # Local fallback (optional)
+    if os.path.exists(file.file_path):
+        return FileResponse(
+            path=file.file_path,
+            filename=file.original_filename,
+            media_type='application/octet-stream'
+        )
 
-    # Else local
     raise HTTPException(status_code=404, detail="File not found")
-    
-    return FileResponse(
-        path=file.file_path,
-        filename=file.original_filename,
-        media_type=file.mime_type
-    )
 
 @router.delete("/{file_id}")
 async def delete_file(
