@@ -13,9 +13,19 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        cyanAccent: '#00eaff',   // bright neon cyan
-        cyanSoft: '#00bcd4',     // softer cyan
-      },
-    },
+        primary: "#6D28D9",     // purple
+        primaryDark: "#4C1D95",
+        primaryLight: "#C4B5FD",
+
+        bgDark: "#1E1B4B",      // dark purple bg
+        bgGradientStart: "#4C1D95",
+        bgGradientEnd: "#6D28D9",
+
+        dashboardBg: "#F3F3F3",
+        sidebarDark: "#2E1065"
+      }
+    }
   },
 };
+
+

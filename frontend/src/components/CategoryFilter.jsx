@@ -6,48 +6,39 @@ const CategoryFilter = ({
   selectedCategory,
   onSelectCategory
 }) => {
-  const categoryColors = {
-    all: 'bg-gray-100 text-gray-800 hover:bg-gray-200',
-    photo: 'bg-blue-100 text-blue-800 hover:bg-blue-200',
-    document: 'bg-red-100 text-red-800 hover:bg-red-200',
-    screenshot: 'bg-purple-100 text-purple-800 hover:bg-purple-200',
-    nature: 'bg-green-100 text-green-800 hover:bg-green-200',
-    people: 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
-  };
+  const getButtonClass = (isActive) =>
+    isActive
+      ? 'border-cyan-300/35 bg-cyan-300/14 text-white shadow-[0_10px_24px_rgba(34,211,238,0.12)]'
+      : 'border-white/8 bg-white/4 text-slate-300 hover:border-white/14 hover:bg-white/7 hover:text-white';
 
   return (
-    <div className="mb-6">
-      <div className="flex items-center gap-2 mb-3 text-gray-600">
-        <Filter className="w-4 h-4" />
-        <span className="font-medium text-sm">Filter by Category</span>
+    <div className="surface-panel-soft p-4">
+      <div className="mb-4 flex items-center gap-2 text-slate-300">
+        <Filter className="h-4 w-4" />
+        <span className="text-sm font-medium uppercase tracking-[0.24em] text-slate-400">
+          Filter by category
+        </span>
       </div>
 
-      <div className="flex gap-2 flex-wrap">
-        {/* All Files */}
+      <div className="flex flex-wrap gap-2">
         <button
           onClick={() => onSelectCategory('all')}
-          className={`px-4 py-2 rounded-lg font-medium text-sm transition ${
+          className={`rounded-full border px-4 py-2 text-sm font-medium transition ${getButtonClass(
             selectedCategory === 'all'
-              ? 'bg-indigo-600 text-white'
-              : categoryColors.all
-          }`}
+          )}`}
         >
           All Files
         </button>
 
-        {/* Dynamic Categories */}
         {categories.map((category) => (
           <button
             key={category}
             onClick={() => onSelectCategory(category)}
-            className={`px-4 py-2 rounded-lg font-medium text-sm transition ${
+            className={`rounded-full border px-4 py-2 text-sm font-medium capitalize transition ${getButtonClass(
               selectedCategory === category
-                ? 'ring-2 ring-indigo-500'
-                : categoryColors[category.toLowerCase()] ||
-                  categoryColors.all
-            }`}
+            )}`}
           >
-            {category.charAt(0).toUpperCase() + category.slice(1)}
+            {category}
           </button>
         ))}
       </div>

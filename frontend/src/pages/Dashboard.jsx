@@ -1,10 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Cloud, LogOut, Loader, Upload } from 'lucide-react';
+import {
+  FileImage,
+  Files,
+  FileText,
+  Grid2x2,
+  List,
+  LogOut,
+  Tag,
+  Upload
+} from 'lucide-react';
 import { fileAPI } from '../services/api';
 import FileUpload from '../components/FileUpload';
-import FileList from '../components/FileList';
+import FileLibrary from '../components/FileLibrary';
 import SearchBar from '../components/SearchBar';
 import CategoryFilter from '../components/CategoryFilter';
 
@@ -20,6 +29,7 @@ const Dashboard = () => {
   const [categories, setCategories] = useState([]);
   const [view, setView] = useState("grid");
   const [activeTag, setActiveTag] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
   
   useEffect(() => {
     loadFiles();
@@ -27,7 +37,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     filterFiles();
-  }, [allFiles, selectedCategory, activeMenu]);
+  }, [allFiles, selectedCategory, activeMenu, activeTag, searchQuery]);
 
   const loadFiles = async () => {
     setLoading(true);
@@ -53,12 +63,9 @@ const Dashboard = () => {
   const filterFiles = () => {
     let filtered = [...allFiles];
 
-    if (activeTag) {
-      filtered = filtered.filter(file =>
-        file.tags && file.tags.toLowerCase().includes(activeTag)
-      );
-    } 
-    else if (activeMenu === "documents") {
+    if (activeMenu === "images") {
+      filtered = filtered.filter((file) => file.mime_type?.startsWith("image/"));
+    } else if (activeMenu === "documents") {
       filtered = filtered.filter(file =>
         file.mime_type?.includes("pdf") ||
         file.mime_type?.includes("document") ||
@@ -66,27 +73,45 @@ const Dashboard = () => {
       );
     }
 
+    if (activeTag) {
+      filtered = filtered.filter((file) => {
+        if (!file.tags) return false;
+
+        try {
+          const parsedTags = JSON.parse(file.tags);
+          return Array.isArray(parsedTags)
+            ? parsedTags.some((tag) => tag.toLowerCase() === activeTag)
+            : file.tags.toLowerCase().includes(activeTag);
+        } catch {
+          return file.tags.toLowerCase().includes(activeTag);
+        }
+      });
+    }
+
     if (selectedCategory !== "all") {
       filtered = filtered.filter(file => file.category === selectedCategory);
+    }
+
+    if (searchQuery.trim()) {
+      const searchTerm = searchQuery.toLowerCase();
+
+      filtered = filtered.filter((file) =>
+        file.original_filename.toLowerCase().includes(searchTerm) ||
+        file.tags?.toLowerCase().includes(searchTerm) ||
+        file.extracted_text?.toLowerCase().includes(searchTerm) ||
+        file.category?.toLowerCase().includes(searchTerm)
+      );
     }
 
     setDisplayedFiles(filtered);
   };
 
   const handleSearch = (query) => {
-    const searchTerm = query.toLowerCase();
-    const filtered = allFiles.filter(file =>
-      file.original_filename.toLowerCase().includes(searchTerm) ||
-      file.tags?.toLowerCase().includes(searchTerm) ||
-      file.extracted_text?.toLowerCase().includes(searchTerm) ||
-      file.category?.toLowerCase().includes(searchTerm)
-    );
-    setDisplayedFiles(filtered);
-    setSelectedCategory('all');
+    setSearchQuery(query);
   };
 
   const handleClearSearch = () => {
-    filterFiles();
+    setSearchQuery('');
   };
 
   const handleLogout = () => {
@@ -102,34 +127,81 @@ const Dashboard = () => {
     return (bytes / Math.pow(k, i)).toFixed(2) + ' ' + sizes[i];
   };
 
+  const menuItems = useMemo(
+    () => [
+      {
+        id: 'all',
+        label: 'All files',
+        count: allFiles.length,
+        icon: Files
+      },
+      {
+        id: 'images',
+        label: 'Images',
+        count: allFiles.filter((file) => file.mime_type?.startsWith('image/')).length,
+        icon: FileImage
+      },
+      {
+        id: 'documents',
+        label: 'Documents',
+        count: allFiles.filter(
+          (file) =>
+            file.mime_type?.includes('pdf') ||
+            file.mime_type?.includes('document') ||
+            file.mime_type?.includes('text')
+        ).length,
+        icon: FileText
+      }
+    ],
+    [allFiles]
+  );
+
+  const statCards = [
+    {
+      label: 'Files stored',
+      value: stats.totalFiles,
+      note: 'Across documents, media, and archives'
+    },
+    {
+      label: 'Storage used',
+      value: formatBytes(stats.totalSize),
+      note: 'Visible across your workspace'
+    },
+    {
+      label: 'Categories',
+      value: categories.length,
+      note: activeTag ? `Filtered by #${activeTag}` : 'AI groups help keep things tidy'
+    }
+  ];
+
   const FileSkeleton = () => (
-    <div className="p-4 rounded-xl animate-pulse space-y-3 glass">
-      <div className="h-4 w-1/3 bg-white/10 rounded" />
-      <div className="h-3 w-1/2 bg-white/10 rounded" />
-      <div className="h-3 w-1/4 bg-white/10 rounded" />
+    <div className="surface-panel-soft animate-pulse space-y-4 p-4">
+      <div className="h-5 w-1/3 rounded bg-white/8" />
+      <div className="h-4 w-2/3 rounded bg-white/6" />
+      <div className="h-4 w-1/2 rounded bg-white/6" />
     </div>
   );
 
   return (
-    <div className="flex min-h-screen bg-[#0b0f12] text-gray-200 relative overflow-hidden">
+    <div className="flex min-h-screen bg-dashboardBg">
 
       {/* Glow */}
       <div className="absolute w-[500px] h-[500px] bg-cyan-500/10 blur-[120px] top-[-100px] left-[-100px]" />
       <div className="absolute w-[400px] h-[400px] bg-blue-500/10 blur-[120px] bottom-[-100px] right-[-100px]" />
 
       {/* Sidebar */}
-      <div className="w-64 bg-[#0e141a] border-r border-cyan-500/10 p-6 flex flex-col z-10">
-        <h2 className="text-xl font-bold text-cyan-400 mb-8">AI Drive</h2>
+      <div className="w-64 bg-[#1f1f2e] text-gray-300 flex flex-col p-6">
+        <h2 className="text-lg font-semibold text-white mb-6">AI Drive</h2>
 
         <div className="space-y-3 text-gray-300">
           {["all", "images", "documents"].map(item => (
             <button
               key={item}
               onClick={() => setActiveMenu(item)}
-              className={`w-full text-left px-3 py-2 rounded-lg transition ${
+              className={`w-64 bg-[#1f1f2e] text-gray-300 flex flex-col p-6 ${
                 activeMenu === item
-                  ? "bg-cyan-500/20 text-cyan-400"
-                  : "hover:bg-cyan-500/10 hover:text-cyan-400"
+                  ? "bg-white/10 text-white"
+                  : "bg-white/10 text-white"
               }`}
             >
               {item === "all" && "📁 All Files"}
@@ -141,10 +213,30 @@ const Dashboard = () => {
       </div>
 
       {/* Main */}
-      <div className="flex-1 flex flex-col z-10">
+      <div className="flex-1 bg-[#F3F3F3] p-6">
+
+        <div className="flex justify-between items-center mb-6">
+
+          {/* Upload Button */}
+          <button
+            onClick={() => document.getElementById('file-upload-input')?.click()}
+            className="bg-cyan-500 text-white px-6 py-2 rounded-md hover:bg-cyan-600"
+          >
+            Upload
+          </button>
+
+          {/* Search */}
+          <input
+            type="text"
+            placeholder="Search here..."
+            onChange={(e) => handleSearch(e.target.value)}
+            className="w-72 p-2 border rounded-md bg-white"
+          />
+
+        </div>
 
         {/* Header */}
-        <div className="flex justify-between items-center px-6 py-4 border-b border-cyan-500/10">
+        {/* <div className="flex justify-between items-center px-6 py-4 border-b border-cyan-500/10">
           <div className="flex items-center gap-3">
             <Cloud className="h-7 w-7 text-cyan-400" />
             <div>
@@ -161,32 +253,31 @@ const Dashboard = () => {
           >
             Logout
           </button>
-        </div>
+        </div> */}
 
         {/* Content */}
         <div className="p-6 space-y-6 animate-fadeIn">
 
-          {/* Stats */}
+          {/* Stats
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <div className="p-6 rounded-2xl bg-[#0f1720]/80 border border-cyan-500/20 backdrop-blur-xl">
-              <p className="text-sm text-cyan-400">Total Files</p>
-              <p className="text-3xl font-bold text-white">{stats.totalFiles}</p>
+            <div className="bg-white p-5 rounded-lg shadow-sm">
+              <p className="text-gray-500 text-sm">Total Files</p>
+              <p className="text-2xl font-bold text-black">{stats.totalFiles}</p>
             </div>
 
-            <div className="p-6 rounded-2xl bg-[#0f1720]/80 border border-cyan-500/20 backdrop-blur-xl">
-              <p className="text-sm text-cyan-400">Storage Used</p>
-              <p className="text-3xl font-bold text-white">
+            <div className="bg-white p-5 rounded-lg shadow-sm">
+              <p className="text-gray-500 text-sm">Storage Used</p>
+              <p className="text-2xl font-bold text-black">
                 {formatBytes(stats.totalSize)}
               </p>
             </div>
-          </div>
+          </div> */}
 
           {/* Search */}
-          <div className="rounded-2xl p-[1px] bg-gradient-to-r from-cyan-500/30 via-blue-500/20 to-purple-500/30">
-            <div className="glass hover:shadow-[0_0_20px_rgba(0,255,255,0.15)] transition rounded-2xl p-3">
+          
+            <div className="transition rounded-2xl p-3">
               <SearchBar onSearch={handleSearch} onClear={handleClearSearch} />
             </div>
-          </div>
 
           {/* Filters */}
           {categories.length > 0 && (
@@ -206,7 +297,7 @@ const Dashboard = () => {
             </h2>
 
             {loading ? (
-              <div className="space-y-4">
+              <div className="bg-white rounded-lg shadow-sm">
                 <FileSkeleton />
                 <FileSkeleton />
                 <FileSkeleton />

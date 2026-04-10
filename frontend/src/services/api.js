@@ -1,10 +1,40 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8000/api';
+export const API_URL = 'http://localhost:8000/api';
 
 const api = axios.create({
   baseURL: API_URL,
 });
+
+const createObjectUrlFromBlob = (blob, mimeType) => {
+  const objectBlob = new Blob([blob], {
+    type: mimeType || blob.type || 'application/octet-stream'
+  });
+  const url = window.URL.createObjectURL(objectBlob);
+
+  return {
+    url,
+    cleanup: () => window.URL.revokeObjectURL(url)
+  };
+};
+
+const resolveFileAsset = async (fileId, mimeType) => {
+  const response = await api.get(`/files/${fileId}/download`, {
+    responseType: 'blob'
+  });
+
+  const contentType = response.headers['content-type'] || response.data.type || '';
+
+  if (contentType.includes('application/json')) {
+    const payload = JSON.parse(await response.data.text());
+    return {
+      url: payload.url,
+      cleanup: null
+    };
+  }
+
+  return createObjectUrlFromBlob(response.data, mimeType);
+};
 
 // Add token to requests
 api.interceptors.request.use((config) => {
@@ -73,21 +103,22 @@ export const fileAPI = {
     const response = await api.get(`/files/${fileId}`);
     return response.data;
   },
-  
-  downloadFile: async (fileId, originalFilename) => {
-    try {
-      const res = await api.get(`/files/${fileId}/download`);
-      const fileUrl = res.data.url;
 
-      // Create hidden link
+  resolveFileAsset,
+  
+  downloadFile: async (fileId, originalFilename, mimeType) => {
+    try {
+      const { url, cleanup } = await resolveFileAsset(fileId, mimeType);
       const link = document.createElement('a');
-      link.href = fileUrl;
+      link.href = url;
       link.setAttribute('download', originalFilename);
-      link.setAttribute('target', '_blank'); // important
       document.body.appendChild(link);
       link.click();
       link.remove();
 
+      if (cleanup) {
+        setTimeout(cleanup, 1000);
+      }
     } catch (err) {
       console.error("Download failed:", err);
       alert("Download failed");

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {Download, Trash2, File, Image, FileText, Video, Music, Archive, Tag, Eye, Loader} from 'lucide-react';
 import { fileAPI } from '../services/api';
 

@@ -1,8 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { Flag, Upload, X } from 'lucide-react';
+import { Upload, AlertTriangle, Copy } from 'lucide-react';
 import { fileAPI } from '../services/api';
-import { AlertTriangle, Copy } from "lucide-react";
-
 
 const FileUpload = ({ onUploadComplete }) => {
   const [isDragging, setIsDragging] = useState(false);
@@ -87,21 +85,19 @@ const FileUpload = ({ onUploadComplete }) => {
   };
 
   const handleKeepBoth = async () => {
-    setShowDuplicateDialog(false);
+    setShowDuplicateModal(false);
     setDuplicateInfo(null);
-    // setUploading(true);
     
-   if (pendingFile) {
+    if (pendingFile) {
       await uploadFile(pendingFile, true); // Force upload
       setPendingFile(null);
     }
   };
 
   const handleSkipUpload = () => {
-    setShowDuplicateDialog(false);
+    setShowDuplicateModal(false);
     setPendingFile(null);
     setDuplicateInfo(null);
-    
   };
 
   const formatFileSize = (bytes) => {
@@ -130,59 +126,76 @@ const FileUpload = ({ onUploadComplete }) => {
   };
 
   return (
-    <div className="mb-6">
-      {/* Upload Area */}
+    <div className="surface-panel overflow-hidden p-5 sm:p-6">
       <div
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={handleClick}
         className={`
-          glass
+          surface-panel-soft
           border-2 border-dashed
-          rounded-xl p-8 text-center cursor-pointer
+          rounded-[26px] p-8 text-center
           transition-all duration-300
           ${
             isDragging
-              ? 'border-cyan-400 shadow-[0_0_25px_rgba(0,255,255,0.4)]'
+              ? 'border-cyan-300 bg-cyan-300/6 shadow-[0_0_30px_rgba(34,211,238,0.16)]'
               : uploading
-              ? 'border-gray-600 opacity-70 cursor-not-allowed'
-              : 'border-cyan-400/30 hover:border-cyan-400 hover:shadow-[0_0_20px_rgba(0,255,255,0.2)]'
+              ? 'cursor-not-allowed border-white/10 opacity-75'
+              : 'cursor-pointer border-cyan-300/18 hover:border-cyan-300/35 hover:bg-white/[0.03]'
           }
         `}
       >
-        <Upload className={`w-12 h-12 mx-auto mb-4 transition ${isDragging ? 'text-cyan-400' : 'text-cyan-300'}`}/>
-        {/* Main Status Text */}
-        <p className="text-lg font-medium text-white mb-2">
-          {uploading ? 'Uploading...' : 'Drop files here or click to browse'}
+        <span
+          className={`mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-[22px] border border-cyan-300/15 bg-cyan-300/10 transition ${
+            isDragging ? 'text-cyan-200' : 'text-cyan-100'
+          }`}
+        >
+          <Upload className="h-8 w-8" />
+        </span>
+
+        <p className="text-2xl font-semibold text-white">
+          {uploading ? 'Uploading your file...' : 'Drop files here or browse'}
         </p>
         
-        <p className="text-sm text-gray-400 mt-2">
-          Supports: Images, Documents, Videos, Archives
+        <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-slate-400">
+          Add images, documents, videos, or archives. New uploads are ready for search and cleanup faster.
         </p>
 
-        {/* Progress Bar */}
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+          <button
+            type="button"
+            onClick={handleClick}
+            disabled={uploading}
+            className="rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 px-5 py-2.5 text-sm font-semibold text-slate-950 transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Choose file
+          </button>
+          <span className="rounded-full border border-white/8 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.24em] text-slate-400">
+            AI tagging enabled
+          </span>
+        </div>
+
         {uploading && (
-          <div className="mt-4">
-             <div className="w-full bg-white/10 rounded-full h-2 overflow-hidden">
+          <div className="mx-auto mt-6 max-w-xl">
+            <div className="h-2 overflow-hidden rounded-full bg-white/10">
               <div
-                className="bg-gradient-to-r from-cyan-400 to-blue-500 h-2 rounded-full transition-all duration-300" style={{ width: `${progress}%` }}
+                className="h-2 rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 transition-all duration-300"
+                style={{ width: `${progress}%` }}
               />
             </div>
-            <p className="text-sm text-cyan-300 mt-2">{progress}%</p>
-
+            <p className="mt-2 text-sm text-cyan-100">{progress}% complete</p>
           </div>
         )}
 
-        {/* Error Message */}
         {error && (
-          <div className="mt-4 glass border border-red-500/30 text-red-300 px-4 py-2 rounded-lg">
+          <div className="mx-auto mt-5 max-w-xl rounded-2xl border border-red-400/25 bg-red-500/10 px-4 py-3 text-sm text-red-100">
             {error}
           </div>
         )}
       </div>
 
-        <input
+      <input
         id="file-upload-input"
         ref={fileInputRef}
         type="file"
@@ -191,13 +204,12 @@ const FileUpload = ({ onUploadComplete }) => {
         disabled={uploading}
       />
 
-        {/* Duplicate Detection Dialog */}
-        {showDuplicateModal && duplicateInfo && (
+      {showDuplicateModal && duplicateInfo && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="glass max-w-md w-full p-6 shadow-[0_0_40px_rgba(0,255,255,0.2)]">
+          <div className="surface-panel max-w-md w-full p-6 shadow-[0_0_40px_rgba(34,211,238,0.14)]">
             <div className="flex items-center justify-center mb-4">
-              <div className="bg-yellow-100 p-3 rounded-full">
-                <AlertTriangle className="w-8 h-8 text-yellow-600" />
+              <div className="rounded-full border border-amber-300/20 bg-amber-300/12 p-3">
+                <AlertTriangle className="w-8 h-8 text-amber-200" />
               </div>
             </div>
             
@@ -205,23 +217,23 @@ const FileUpload = ({ onUploadComplete }) => {
               {duplicateInfo.duplicate_type === 'exact' ? 'Duplicate File Detected' : 'Similar File Found'}
             </h2>
             
-            <p className="text-gray-400 text-center mb-6">
+            <p className="text-slate-400 text-center mb-6">
               {duplicateInfo.duplicate_type === 'exact' 
                 ? 'This exact file already exists in your storage.'
                 : 'A visually similar image was found in your storage.'}
             </p>
 
-            <div className="bg-gray-50 rounded-lg p-4 mb-6">
+            <div className="surface-panel-soft rounded-2xl p-4 mb-6">
               <div className="flex items-start space-x-3">
-                <Copy className="w-5 h-5 text-gray-400 mt-1 flex-shrink-0" />
+                <Copy className="w-5 h-5 text-slate-400 mt-1 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-800 truncate">
+                  <p className="font-medium text-white truncate">
                     {duplicateInfo.existing_file?.filename || 'Unknown file'}
                   </p>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-slate-400">
                     {formatFileSize(duplicateInfo.existing_file?.size)}
                   </p>
-                  <p className="text-xs text-gray-400 mt-1">
+                  <p className="text-xs text-slate-500 mt-1">
                     Uploaded: {formatDate(duplicateInfo.existing_file?.uploaded_at)}
                   </p>
                 </div>
@@ -239,7 +251,7 @@ const FileUpload = ({ onUploadComplete }) => {
               <button
                 onClick={handleSkipUpload}
                 className="w-full py-3 rounded-lg font-semibold
-                          bg-white/10 text-gray-300
+                          bg-white/10 text-slate-300
                           hover:bg-white/20 transition">
                 Skip Upload
               </button>
